@@ -1,0 +1,15 @@
+{
+  "dependencies": {
+    "@turf/bbox": "^5.0.1",
+    "@turf/bbox-polygon": "^5.0.1",
+    "@turf/buffer": "^5.1.5",
+    "@turf/centroid": "^5.0.2",
+    "@turf/projection": "^5.0.1",
+    "@turf/union": "^5.0.2",
+    "emptymap.js": "^1.0.1",
+    "geojson2svg": "^1.2.3",
+    "handlebars": "^4.0.11",
+    "lodash": "^4.17.10",
+    "map-the-tiles": "^1.2.1"
+  }
+}
