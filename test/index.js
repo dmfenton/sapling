@@ -13,7 +13,7 @@ const html = `
 <head>
   <style>
     .default {
-      stroke: #cccccc;
+      stroke: red;
       stroke-width: 0.05px;
       fill: transparent;
     }
