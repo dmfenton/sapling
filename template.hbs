@@ -1,4 +1,4 @@
-<div style="width:500px;height:500px;position:relative;overflow:hidden;">
+<div style="width:{{size.width}}px;height:{{size.height}}px;position:relative;overflow:hidden;">
   <div class="tiles" transform="{{matrix}}" style="width:100%;height:100%;position:absolute;transform-origin:0px 0px;">
   {{#each tiles}}
     <img src="{{this.url}}.png" style="position:absolute;width:auto !important;left:{{this.left}}px;top:{{this.top}}px;">
@@ -7,9 +7,9 @@
   <div class="data" style="height:100%;width:100%;position:absolute;">
     <svg x="0" y="0" width="100%" height="100%">
       <g transform="{{matrix}}">
-        {{#each paths}}
+      {{#each paths}}
         {{{this}}}
-        {{/each}}
+      {{/each}}
       </g>
     </svg>
   </div>

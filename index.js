@@ -5,7 +5,7 @@ const bbox2Polygon = require('@turf/bbox-polygon')
 const EmptyMap = require('emptymap.js')
 const geojson2svg = require('geojson2svg')
 const MapTheTiles = require('map-the-tiles')
-const { flatMap, flatten, get } = require('lodash')
+const { compact, flatMap, flatten, get } = require('lodash')
 const Handlebars = require('handlebars')
 const fs = require('fs')
 const template = fs.readFileSync('./template.hbs').toString()
@@ -37,13 +37,34 @@ const nullIsland = {
   }
 }
 
+const DEFAULT_STYLE = {
+  Polygon: {
+    stroke: 'blue',
+    'stroke-width': '0.05px',
+    fill: 'transparent'
+  },
+  Point: {
+    'stroke': 'rgb(220, 220, 220)',
+    'stroke-opacity': '1',
+    'stroke-width': '0.03',
+    'stroke-linecap': 'butt',
+    'stroke-linejoin': 'miter',
+    'stroke-miterlimit': '4',
+    fill: 'rgb(49, 130, 189)',
+    'fill-opacity': '0.882353',
+    'fill-rule': 'evenodd',
+    transform: 'matrix(1, 0, 0, 1, 0, 0)'
+  }
+}
+
 class Sapling {
   constructor (options = {}) {
-    const size = options.size || { width: 500, height: 500 }
-    this.map = new EmptyMap(size)
-    this.converter = geojson2svg(size)
-    this.tiler = new MapTheTiles(size)
+    this.size = options.size || { width: 256, height: 256 }
+    this.map = new EmptyMap(this.size)
+    this.converter = geojson2svg(this.size)
+    this.tiler = new MapTheTiles(this.size)
     this.basemap = options.basemap ? get(BASEMAPS, options.basemap) : get(BASEMAPS, 'esri.natgeo')
+    this.style = options.style || DEFAULT_STYLE
 
     this.features = []
     this.center = Object.assign({}, nullIsland)
@@ -53,23 +74,25 @@ class Sapling {
     }
   }
 
-  addFeatures (features) {
+  addFeatures (features, options = {}) {
+    const style = options.style || DEFAULT_STYLE
     this.features = this.features.concat(features.map(f => {
-      return projection.toMercator(f)
+      if (!get(f, 'geometry.coordinates')) return
+      const projected = projection.toMercator(f)
+      projected.style = style[f.geometry.type]
+      return projected
     }))
     this.recalculate()
-    return true
   }
 
-  addBboxes (bboxes) {
-    this.features = this.concat(bboxes.map(b => {
+  addBboxes (bboxes, options) {
+    this.addFeatures(bboxes.map(b => {
       return projection.toMercator(bbox2Polygon(flatten(b)))
-    }))
-    this.recalculate()
-    return true
+    }), options)
   }
 
   recalculate () {
+    this.features = compact(this.features)
     this.extent = extent({type: 'FeatureCollection', features: this.features})
     this.center = calculateCenter(this.extent)
     this.zoom = calculateZoom(this.extent)
@@ -84,15 +107,19 @@ class Sapling {
 
     const matrix = `matrix(${this.map.matrix.m.join(', ')})`
     const paths = flatMap(this.features, f => {
-      return this.converter.convert(f,
-      {attributes: {class: 'default'}})
+      return this.converter.convert(f, {
+        attributes: createStyle(f),
+        pointAsCircle: true,
+        r: 0.05
+      })
     })
     const tiles = this.getTiles()
 
     return render({
       matrix,
       paths,
-      tiles
+      tiles,
+      size: this.size
     })
   }
 
@@ -139,6 +166,16 @@ function formatTiles (basemap, options) {
     top: options.top,
     left: options.left
   }
+}
+
+function createStyle (feature) {
+  let style
+  if (typeof feature.style === 'function') {
+    style = feature.style(feature)
+  } else {
+    style = feature.style
+  }
+  return style
 }
 
 module.exports = Sapling
