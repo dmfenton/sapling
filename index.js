@@ -44,12 +44,12 @@ const DEFAULT_STYLE = {
     fill: 'transparent'
   },
   Point: {
-    'stroke': 'rgb(220, 220, 220)',
-    'stroke-opacity': '1',
-    'stroke-width': '0.03',
-    'stroke-linecap': 'butt',
-    'stroke-linejoin': 'miter',
-    'stroke-miterlimit': '4',
+    // 'stroke': 'rgb(220, 220, 220)',
+    // 'stroke-opacity': '1',
+    // 'stroke-width': '0.03',
+    // 'stroke-linecap': 'butt',
+    // 'stroke-linejoin': 'miter',
+    // 'stroke-miterlimit': '4',
     fill: 'rgb(49, 130, 189)',
     'fill-opacity': '0.882353',
     'fill-rule': 'evenodd',
@@ -74,8 +74,14 @@ class Sapling {
     }
   }
 
+  static createMap (features, options) {
+    const sapling = new Sapling({...options, features})
+    return sapling.createDom()
+  }
+
   addFeatures (features, options = {}) {
     const style = options.style || DEFAULT_STYLE
+    if (features.type === 'FeatureCollection') features = features.features
     this.features = this.features.concat(features.map(f => {
       if (!get(f, 'geometry.coordinates')) return
       const projected = projection.toMercator(f)
@@ -110,11 +116,10 @@ class Sapling {
       return this.converter.convert(f, {
         attributes: createStyle(f),
         pointAsCircle: true,
-        r: 0.05
+        r: 0.160786885 + -0.000315574 * this.size.width
       })
     })
     const tiles = this.getTiles()
-
     return render({
       matrix,
       paths,
