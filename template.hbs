@@ -1,16 +1,14 @@
 <div style="width:{{size.width}}px;height:{{size.height}}px;position:relative;overflow:hidden;">
-  <div class="tiles" transform="{{matrix}}" style="width:100%;height:100%;position:absolute;transform-origin:0px 0px;">
+  <div class="tiles" style="width:100%;height:100%;position:absolute;transform-origin:0px 0px;">
   {{#each tiles}}
     <img src="{{this.url}}.png" style="position:absolute;width:auto !important;left:{{this.left}}px;top:{{this.top}}px;">
   {{/each}}
   </div>
   <div class="data" style="height:100%;width:100%;position:absolute;">
-    <svg x="0" y="0" width="100%" height="100%">
-      <g transform="{{matrix}}">
-      {{#each paths}}
-        {{{this}}}
-      {{/each}}
-      </g>
+    <svg viewBox="0 0 {{size.width}} {{size.height}}" style="width:100%;height:auto;">
+    {{#each paths}}
+      {{{this}}}
+    {{/each}}
     </svg>
   </div>
 </div>

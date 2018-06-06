@@ -11,4 +11,4 @@ const bench = new Benchmark('Two Feature', function () {
 
 bench.run()
 
-console.log(bench.stats)
+console.log(bench.hz)

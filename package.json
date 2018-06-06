@@ -6,8 +6,8 @@
     "@turf/centroid": "^5.0.2",
     "@turf/projection": "^5.0.1",
     "@turf/union": "^5.0.2",
+    "d3": "^5.4.0",
     "emptymap.js": "^1.0.1",
-    "geojson2svg": "^1.2.3",
     "handlebars": "^4.0.11",
     "lodash": "^4.17.10",
     "map-the-tiles": "^1.2.1"
@@ -16,5 +16,11 @@
     "benchmark": "^2.1.4",
     "microtime": "^2.1.8",
     "node-fetch": "^2.1.2"
-  }
+  },
+  "name": "sapling",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "dmfenton <dfenton@esri.com>",
+  "license": "Apache-2.0",
+  "private": false
 }

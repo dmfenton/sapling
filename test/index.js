@@ -3,7 +3,7 @@ const Sapling = require('../')
 
 const featureCollection = require('./fixtures/featureCollection.json')
 
-const sapling = new Sapling()
+const sapling = new Sapling({ size: {width: 1024, height: 768}})
 sapling.addFeatures(featureCollection.features)
 const dom = sapling.createDom()
 console.log(dom)

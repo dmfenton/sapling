@@ -3,57 +3,53 @@ const extent = require('@turf/bbox')
 const projection = require('@turf/projection')
 const bbox2Polygon = require('@turf/bbox-polygon')
 const EmptyMap = require('emptymap.js')
-const geojson2svg = require('geojson2svg')
 const MapTheTiles = require('map-the-tiles')
+const d3 = require('d3')
 const { compact, flatMap, flatten, get } = require('lodash')
 const Handlebars = require('handlebars')
 const fs = require('fs')
-const template = fs.readFileSync('./template.hbs').toString()
+const path = require('path')
+const template = fs.readFileSync(path.join(__dirname, './template.hbs')).toString()
 const render = Handlebars.compile(template)
 const ZOOM_CONST = 2 ** 20
 
 const BASEMAPS = {
   esri: {
-    topo: 'http://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/${z}/${y}/${x}',
+    topo: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/${z}/${y}/${x}',
     street: 'http://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/${z}/${y}/{x}',
     natgeo: 'https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/${z}/${y}/${x}',
     imagery: 'http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}'
   },
   osm: {
     street: 'https://tile.openstreetmap.org/${z}/${x}/${y}'
-  },
-  stamen: {
-    toner: 'http://tile.stamen.com/toner/{z}/{x}/{y}',
-    terrain: 'http://tile.stamen.com/terrain/{z}/{x}/{y}',
-    watercolor: 'http://tile.stamen.com/watercolor/{z}/{x}/{y}'
-  }
-}
-
-const nullIsland = {
-  type: 'Feature',
-  geometry: {
-    type: 'Point',
-    coordinates: [0, 0]
+  }, stamen: {
+    toner: 'https://tile.stamen.com/toner/{z}/{x}/{y}',
+    terrain: 'https://tile.stamen.com/terrain/{z}/{x}/{y}',
+    watercolor: 'https://tile.stamen.com/watercolor/{z}/{x}/{y}'
   }
 }
 
 const DEFAULT_STYLE = {
+  MultiPolygon: {
+    stroke: 'blue',
+    'stroke-width': '2px',
+    // fill: 'transparent'
+  },
   Polygon: {
     stroke: 'blue',
-    'stroke-width': '0.05px',
+    'stroke-width': '2px',
     fill: 'transparent'
   },
   Point: {
-    // 'stroke': 'rgb(220, 220, 220)',
-    // 'stroke-opacity': '1',
-    // 'stroke-width': '0.03',
-    // 'stroke-linecap': 'butt',
-    // 'stroke-linejoin': 'miter',
-    // 'stroke-miterlimit': '4',
-    fill: 'rgb(49, 130, 189)',
+    'stroke': 'rgb(220, 220, 220)',
+    'stroke-opacity': '1',
+    'stroke-width': '0.03',
+    'stroke-linecap': 'butt',
+    'stroke-linejoin': 'miter',
+    'stroke-miterlimit': '4',
+    fill: 'red',
     'fill-opacity': '0.882353',
-    'fill-rule': 'evenodd',
-    transform: 'matrix(1, 0, 0, 1, 0, 0)'
+    'fill-rule': 'evenodd'
   }
 }
 
@@ -61,13 +57,12 @@ class Sapling {
   constructor (options = {}) {
     this.size = options.size || { width: 256, height: 256 }
     this.map = new EmptyMap(this.size)
-    this.converter = geojson2svg(this.size)
     this.tiler = new MapTheTiles(this.size)
     this.basemap = options.basemap ? get(BASEMAPS, options.basemap) : get(BASEMAPS, 'esri.natgeo')
     this.style = options.style || DEFAULT_STYLE
 
     this.features = []
-    this.center = Object.assign({}, nullIsland)
+    this.center = [0, 0]
 
     if (options.features) {
       this.addFeatures(options.features)
@@ -81,47 +76,42 @@ class Sapling {
 
   addFeatures (features, options = {}) {
     const style = options.style || DEFAULT_STYLE
-    if (features.type === 'FeatureCollection') features = features.features
+    if (features.type === 'FeatureCollection') {
+      features = features.features
+    } else if (features.type === 'Feature') {
+      features = [ features ]
+    }
     this.features = this.features.concat(features.map(f => {
       if (!get(f, 'geometry.coordinates')) return
-      const projected = projection.toMercator(f)
-      projected.style = style[f.geometry.type]
-      return projected
+      f.style = f.style || style[f.geometry.type]
+      return f
     }))
     this.recalculate()
   }
 
   addBboxes (bboxes, options) {
     this.addFeatures(bboxes.map(b => {
-      return projection.toMercator(bbox2Polygon(flatten(b)))
+      return bbox2Polygon(flatten(b))
     }), options)
   }
 
   recalculate () {
     this.features = compact(this.features)
     this.extent = extent({type: 'FeatureCollection', features: this.features})
-    this.center = calculateCenter(this.extent)
+    this.center = calculateCenter(this.extent).geometry.coordinates
     this.zoom = calculateZoom(this.extent)
   }
 
   createDom () {
     // calculate transformation matrix
     this.map.setView({
-      center: this.center.geometry.coordinates,
+      center: projection.toMercator(this.center),
       zoom: this.zoom
     })
 
-    const matrix = `matrix(${this.map.matrix.m.join(', ')})`
-    const paths = flatMap(this.features, f => {
-      return this.converter.convert(f, {
-        attributes: createStyle(f),
-        pointAsCircle: true,
-        r: 0.160786885 + -0.000315574 * this.size.width
-      })
-    })
+    const paths = createPaths(this.features, {size: this.size, center: this.center, extent: calculateExtent(this.map.getExtent())})
     const tiles = this.getTiles()
     return render({
-      matrix,
       paths,
       tiles,
       size: this.size
@@ -129,7 +119,7 @@ class Sapling {
   }
 
   getTiles () {
-    const tileOpts = this.tiler.getTiles(this.center.geometry.coordinates, Math.ceil(this.zoom))
+    const tileOpts = this.tiler.getTiles(projection.toMercator(this.center), this.zoom)
     const basemap = this.basemap
     return tileOpts.map(t => {
       return {
@@ -146,8 +136,7 @@ function calculateCenter (extent) {
 }
 
 function calculateZoom (bbox) {
-  const wgsExtent = extent(projection.toWgs84(bbox2Polygon(bbox)))
-  const [xMin, yMin, xMax, yMax] = wgsExtent
+  const [xMin, yMin, xMax, yMax] = bbox
 
   const xDiff = xMax - xMin
   const yDiff = yMax - yMin
@@ -161,8 +150,9 @@ function calculateZoom (bbox) {
     zoomLevel = -1 * ((Math.log(maxDiff) / Math.log(2)) - (Math.log(360) / Math.log(2)))
     if (zoomLevel < 1) zoomLevel = 1
   }
-
-  return zoomLevel
+  zoomLevel = Math.round(zoomLevel)
+  // return zoomLevel < 1 ? 1 : zoomLevel
+  return zoomLevel + 2
 }
 
 function formatTiles (basemap, options) {
@@ -171,6 +161,29 @@ function formatTiles (basemap, options) {
     top: options.top,
     left: options.left
   }
+}
+
+function calculateExtent (mapExtent) {
+  const { ll, ur } = mapExtent
+  const f = projection.toWgs84(bbox2Polygon([...ll, ...ur]))
+  f.geometry.coordinates[0].reverse()
+  return f
+}
+
+function createPaths (features, options) {
+  const { width, height } = options.size
+  const projection = d3.geoMercator()
+    .center(options.center)
+    .fitSize([width, height], options.extent)
+
+  const path = d3.geoPath(projection)
+  return features.map(f => {
+    const style = createStyle(f)
+    const attributes = Object.entries(style).reduce((attrString, [key, value]) => {
+      return `${attrString}${key}="${value}" `
+    }, '').slice(0, -1)
+    return `<path ${attributes} d="${path(f)}"></path>`
+  })
 }
 
 function createStyle (feature) {
