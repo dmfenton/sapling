@@ -5,57 +5,20 @@ const bbox2Polygon = require('@turf/bbox-polygon')
 const EmptyMap = require('emptymap.js')
 const MapTheTiles = require('map-the-tiles')
 const d3 = require('d3')
-const { compact, flatMap, flatten, get } = require('lodash')
+const { compact, flatten, get } = require('lodash')
 const Handlebars = require('handlebars')
 const fs = require('fs')
 const path = require('path')
 const template = fs.readFileSync(path.join(__dirname, './template.hbs')).toString()
 const render = Handlebars.compile(template)
 const ZOOM_CONST = 2 ** 20
-
-const BASEMAPS = {
-  esri: {
-    topo: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/${z}/${y}/${x}',
-    street: 'http://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/${z}/${y}/{x}',
-    natgeo: 'https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/${z}/${y}/${x}',
-    imagery: 'http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}'
-  },
-  osm: {
-    street: 'https://tile.openstreetmap.org/${z}/${x}/${y}'
-  }, stamen: {
-    toner: 'https://tile.stamen.com/toner/{z}/{x}/{y}',
-    terrain: 'https://tile.stamen.com/terrain/{z}/{x}/{y}',
-    watercolor: 'https://tile.stamen.com/watercolor/{z}/{x}/{y}'
-  }
-}
-
-const DEFAULT_STYLE = {
-  MultiPolygon: {
-    stroke: 'blue',
-    'stroke-width': '2px',
-    // fill: 'transparent'
-  },
-  Polygon: {
-    stroke: 'blue',
-    'stroke-width': '2px',
-    fill: 'transparent'
-  },
-  Point: {
-    'stroke': 'rgb(220, 220, 220)',
-    'stroke-opacity': '1',
-    'stroke-width': '0.03',
-    'stroke-linecap': 'butt',
-    'stroke-linejoin': 'miter',
-    'stroke-miterlimit': '4',
-    fill: 'red',
-    'fill-opacity': '0.882353',
-    'fill-rule': 'evenodd'
-  }
-}
+const BASEMAPS = require('./basemaps')
+const DEFAULT_STYLE = require('./style')
 
 class Sapling {
   constructor (options = {}) {
     this.size = options.size || { width: 256, height: 256 }
+    this.zoomBias = options.zoomBias
     this.map = new EmptyMap(this.size)
     this.tiler = new MapTheTiles(this.size)
     this.basemap = options.basemap ? get(BASEMAPS, options.basemap) : get(BASEMAPS, 'esri.natgeo')
@@ -99,7 +62,7 @@ class Sapling {
     this.features = compact(this.features)
     this.extent = extent({type: 'FeatureCollection', features: this.features})
     this.center = calculateCenter(this.extent).geometry.coordinates
-    this.zoom = calculateZoom(this.extent)
+    this.zoom = calculateZoom(this.extent, { bias: this.zoomBias })
   }
 
   createDom () {
@@ -109,7 +72,15 @@ class Sapling {
       zoom: this.zoom
     })
 
-    const paths = createPaths(this.features, {size: this.size, center: this.center, extent: calculateExtent(this.map.getExtent())})
+    const paths = createPaths(
+      this.features,
+      {
+        size: this.size,
+        center: this.center,
+        extent: calculateExtent(this.map.getExtent())
+      }
+    )
+
     const tiles = this.getTiles()
     return render({
       paths,
@@ -120,10 +91,9 @@ class Sapling {
 
   getTiles () {
     const tileOpts = this.tiler.getTiles(projection.toMercator(this.center), this.zoom)
-    const basemap = this.basemap
     return tileOpts.map(t => {
       return {
-        url: this.basemap.replace('${z}', t.z).replace('${x}', t.x).replace('${y}', t.y),
+        url: this.basemap.replace('${z}', t.z).replace('${x}', t.x).replace('${y}', t.y), // eslint-disable-line
         top: t.top,
         left: t.left
       }
@@ -135,8 +105,9 @@ function calculateCenter (extent) {
   return centroid(bbox2Polygon(extent))
 }
 
-function calculateZoom (bbox) {
+function calculateZoom (bbox, options = {}) {
   const [xMin, yMin, xMax, yMax] = bbox
+  const bias = options.bias || 0
 
   const xDiff = xMax - xMin
   const yDiff = yMax - yMin
@@ -152,15 +123,7 @@ function calculateZoom (bbox) {
   }
   zoomLevel = Math.round(zoomLevel)
   // return zoomLevel < 1 ? 1 : zoomLevel
-  return zoomLevel + 2
-}
-
-function formatTiles (basemap, options) {
-  return {
-    url,
-    top: options.top,
-    left: options.left
-  }
+  return zoomLevel + bias
 }
 
 function calculateExtent (mapExtent) {

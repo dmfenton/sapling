@@ -15,12 +15,19 @@
   "devDependencies": {
     "benchmark": "^2.1.4",
     "microtime": "^2.1.8",
-    "node-fetch": "^2.1.2"
+    "node-fetch": "^2.1.2",
+    "tap-spec": "^5.0.0",
+    "tape": "^4.9.0"
   },
   "name": "sapling",
   "version": "1.0.0",
   "main": "index.js",
   "author": "dmfenton <dfenton@esri.com>",
   "license": "Apache-2.0",
-  "private": false
+  "private": false,
+  "description": "Render SVG maps server side",
+  "repository": "https://github.com/dmfenton/sapling.git",
+  "scripts": {
+    "test": "tape test/*.spec.js | tap-spec"
+  }
 }
