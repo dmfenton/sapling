@@ -669,9 +669,9 @@ line-segments-intersect@0.0.0:
   version "0.0.0"
   resolved "https://registry.yarnpkg.com/line-segments-intersect/-/line-segments-intersect-0.0.0.tgz#72a62c42a6aa1b036baa5176ccd51e4db80eeafa"
 
-lodash@^4.17.10, lodash@^4.17.4:
-  version "4.17.10"
-  resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.10.tgz#1b7793cf7259ea38fb3661d4d38b3260af8ae4e7"
+lodash@^4.17.10, lodash@^4.17.13, lodash@^4.17.4:
+  version "4.17.13"
+  resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.13.tgz#0bdc3a6adc873d2f4e0c4bac285df91b64fc7b93"
 
 longest@^1.0.1:
   version "1.0.1"
