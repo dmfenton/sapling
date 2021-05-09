@@ -9,7 +9,7 @@
     "d3": "^5.4.0",
     "emptymap.js": "^1.0.1",
     "handlebars": "^4.0.11",
-    "lodash": "^4.17.10",
+    "lodash": "^4.17.21",
     "map-the-tiles": "^1.2.1"
   },
   "devDependencies": {
