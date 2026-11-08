@@ -6,17 +6,16 @@
     "@turf/centroid": "^5.0.2",
     "@turf/projection": "^5.0.1",
     "@turf/union": "^5.0.2",
-    "d3": "^5.4.0",
     "emptymap.js": "^1.0.1",
-    "handlebars": "^4.0.11",
-    "lodash": "^4.17.10",
-    "map-the-tiles": "^1.2.1"
+    "handlebars": "^4.7.7",
+    "lodash": "^4.17.21",
+    "map-the-tiles": "^1.2.1",
+    "d3-geo": "1.10.0"
   },
   "devDependencies": {
     "benchmark": "^2.1.4",
-    "microtime": "^2.1.8",
-    "node-fetch": "^2.1.2",
-    "tap-spec": "^5.0.0",
+    "microtime": "^3.1.1",
+    "node-fetch": "^2.6.7",
     "tape": "^4.9.0"
   },
   "name": "sapling",
@@ -28,6 +27,6 @@
   "description": "Render SVG maps server side",
   "repository": "https://github.com/dmfenton/sapling.git",
   "scripts": {
-    "test": "tape test/*.spec.js | tap-spec"
+    "test": "tape test/*.spec.js"
   }
 }
